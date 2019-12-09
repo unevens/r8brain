@@ -1,3 +1,5 @@
+this branch only contains the code needed to be included, and it supports using pffft-double https://github.com/unevens/pffft by defining `R8B_PFFFT_DOUBLE=1`. Here follows the original readme.
+
 # r8brain-free-src #
 ## Introduction ##
 Open source (under the MIT license) high-quality professional audio sample
