@@ -1,5 +1,6 @@
 /* Copyright (c) 2013  Julien Pommier ( pommier@modartt.com )
    Copyright (c) 2020  Hayati Ayguen ( h_ayguen@web.de )
+   Copyright (c) 2020  Dario Mambro ( dario.mambro@gmail.com )
 
    Based on original fortran 77 code from FFTPACKv4 from NETLIB
    (http://www.netlib.org/fftpack), authored by Dr Paul Swarztrauber
@@ -54,17 +55,26 @@
 */
 
 /*
-  ChangeLog: 
-  - 2011/10/02, version 1: This is the very first release of this file.
+   NOTE: This file is adapted from Julien Pommier's original PFFFT,
+   which works on 32 bit floating point precision using SSE instructions,
+   to work with 64 bit floating point precision using AVX instructions.
+   Author: Dario Mambro @ https://github.com/unevens/pffft
 */
 
-#include "pffft.h"
+#include "pffft_double.h"
 
 /* detect compiler flavour */
 #if defined(_MSC_VER)
 #  define COMPILER_MSVC
 #elif defined(__GNUC__)
 #  define COMPILER_GCC
+#endif
+
+#ifdef COMPILER_MSVC
+#  define _USE_MATH_DEFINES
+#  include <malloc.h>
+#else
+#  include <alloca.h>
 #endif
 
 #include <stdlib.h>
@@ -92,38 +102,39 @@
 
 /* 
    vector support macros: the rest of the code is independant of
-   SSE/Altivec/NEON -- adding support for other platforms with 4-element
+   AVX -- adding support for other platforms with 4-element
    vectors should be limited to these macros 
 */
-#include "simd/pf_float.h"
+#include "simd/pf_double.h"
 
 /* have code comparable with this definition */
-#define SETUP_STRUCT               PFFFT_Setup
-#define FUNC_NEW_SETUP             pffft_new_setup
-#define FUNC_DESTROY               pffft_destroy_setup
-#define FUNC_TRANSFORM_UNORDRD     pffft_transform
-#define FUNC_TRANSFORM_ORDERED     pffft_transform_ordered
-#define FUNC_ZREORDER              pffft_zreorder
-#define FUNC_ZCONVOLVE_ACCUMULATE  pffft_zconvolve_accumulate
-#define FUNC_ZCONVOLVE_NO_ACCU     pffft_zconvolve_no_accu
+#define float double
+#define SETUP_STRUCT               PFFFTD_Setup
+#define FUNC_NEW_SETUP             pffftd_new_setup
+#define FUNC_DESTROY               pffftd_destroy_setup
+#define FUNC_TRANSFORM_UNORDRD     pffftd_transform
+#define FUNC_TRANSFORM_ORDERED     pffftd_transform_ordered
+#define FUNC_ZREORDER              pffftd_zreorder
+#define FUNC_ZCONVOLVE_ACCUMULATE  pffftd_zconvolve_accumulate
+#define FUNC_ZCONVOLVE_NO_ACCU     pffftd_zconvolve_no_accu
 
-#define FUNC_ALIGNED_MALLOC        pffft_aligned_malloc
-#define FUNC_ALIGNED_FREE          pffft_aligned_free
-#define FUNC_SIMD_SIZE             pffft_simd_size
-#define FUNC_SIMD_ARCH             pffft_simd_arch
-#define FUNC_VALIDATE_SIMD_A       validate_pffft_simd
-#define FUNC_VALIDATE_SIMD_EX      validate_pffft_simd_ex
+#define FUNC_ALIGNED_MALLOC        pffftd_aligned_malloc
+#define FUNC_ALIGNED_FREE          pffftd_aligned_free
+#define FUNC_SIMD_SIZE             pffftd_simd_size
+#define FUNC_SIMD_ARCH             pffftd_simd_arch
+#define FUNC_VALIDATE_SIMD_A       validate_pffftd_simd
+#define FUNC_VALIDATE_SIMD_EX      validate_pffftd_simd_ex
 
-#define FUNC_CPLX_FINALIZE         pffft_cplx_finalize
-#define FUNC_CPLX_PREPROCESS       pffft_cplx_preprocess
-#define FUNC_REAL_PREPROCESS_4X4   pffft_real_preprocess_4x4
-#define FUNC_REAL_PREPROCESS       pffft_real_preprocess
-#define FUNC_REAL_FINALIZE_4X4     pffft_real_finalize_4x4
-#define FUNC_REAL_FINALIZE         pffft_real_finalize
-#define FUNC_TRANSFORM_INTERNAL    pffft_transform_internal
+#define FUNC_CPLX_FINALIZE         pffftd_cplx_finalize
+#define FUNC_CPLX_PREPROCESS       pffftd_cplx_preprocess
+#define FUNC_REAL_PREPROCESS_4X4   pffftd_real_preprocess_4x4
+#define FUNC_REAL_PREPROCESS       pffftd_real_preprocess
+#define FUNC_REAL_FINALIZE_4X4     pffftd_real_finalize_4x4
+#define FUNC_REAL_FINALIZE         pffftd_real_finalize
+#define FUNC_TRANSFORM_INTERNAL    pffftd_transform_internal
 
-#define FUNC_COS  cosf
-#define FUNC_SIN  sinf
+#define FUNC_COS  cos
+#define FUNC_SIN  sin
 
 
 #include "pffft_priv_impl.h"
