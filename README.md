@@ -1,3 +1,8 @@
+This fork uses the last version of [PFFFT](https://github.com/marton78/pffft), 
+with support for double (and single) precision on all platforms, with SIMD 
+instructions where they are supported (including Neon with double precision 
+on Arm AArch64).
+
 # r8brain-free-src #
 
 ## Introduction ##
